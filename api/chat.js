@@ -90,36 +90,64 @@ async function callGroq(model, key, system, msgs, signal) {
 
 const list = (v, def) => String(v || def).split(',').map(s => s.trim()).filter(Boolean);
 
+// daftar percobaan: Gemini (tiap model di GEMINI_MODELS), lalu Groq (tiap model di GROQ_MODELS)
+function buildAttempts(system, msgs) {
+    const attempts = [];
+    if (process.env.GEMINI_API_KEY) list(process.env.GEMINI_MODELS, 'gemini-2.5-flash-lite,gemini-2.5-flash').forEach(m =>
+        attempts.push({ name: 'gemini:' + m, run: sg => callGemini(m, process.env.GEMINI_API_KEY, system, msgs, sg) }));
+    if (process.env.GROQ_API_KEY) list(process.env.GROQ_MODELS, 'llama-3.1-8b-instant').forEach(m =>
+        attempts.push({ name: 'groq:' + m, run: sg => callGroq(m, process.env.GROQ_API_KEY, system, msgs, sg) }));
+    return attempts;
+}
+
+const clientIp = req => (String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()) || (req.socket && req.socket.remoteAddress) || 'x';
+
 module.exports = async function handler(req, res) {
     res.setHeader('Cache-Control', 'no-store');
+
+    // GET: cek status. Tambahkan ?tes=1 untuk mencoba tiap model sungguhan dan melihat kode errornya (kunci tidak pernah ditampilkan)
+    if (req.method === 'GET') {
+        const info = { error: 'method', gemini_key_terbaca: !!process.env.GEMINI_API_KEY, groq_key_terbaca: !!process.env.GROQ_API_KEY };
+        const tes = new URL(req.url || '/', 'http://x').searchParams.get('tes') === '1';
+        if (!tes) return res.status(405).json(info);
+        if (!allowed(clientIp(req))) return res.status(429).json({ error: 'rate' });
+        const hasil = [];
+        for (const a of buildAttempts('Balas dengan satu kata: ok', [{ role: 'user', text: 'tes' }])) {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), LIMITS.attemptMs);
+            try { await a.run(ctrl.signal); hasil.push({ model: a.name, ok: true }); }
+            catch (e) { hasil.push({ model: a.name, ok: false, pesan: e && e.message }); }
+            clearTimeout(timer);
+        }
+        return res.status(200).json(Object.assign(info, { error: undefined, hasil }));
+    }
+
     if (req.method !== 'POST') return res.status(405).json({ error: 'method' });
     if (!sameOrigin(req)) return res.status(403).json({ error: 'origin' });
-
-    const ip = (String(req.headers['x-forwarded-for'] || '').split(',')[0].trim()) || (req.socket && req.socket.remoteAddress) || 'x';
-    if (!allowed(ip)) return res.status(429).json({ error: 'rate' });
+    if (!allowed(clientIp(req))) return res.status(429).json({ error: 'rate' });
 
     const data = clean(req.body);
     if (!data) return res.status(400).json({ error: 'bad' });
 
     const system = SYSTEM + '\n\nDATA TOKO:\n' + (data.knowledge || '(kosong)');
-
-    // urutan percobaan: Gemini (tiap model di GEMINI_MODELS), lalu Groq
-    const attempts = [];
-    if (process.env.GEMINI_API_KEY) list(process.env.GEMINI_MODELS, 'gemini-2.5-flash-lite,gemini-2.5-flash').forEach(m => attempts.push(s => callGemini(m, process.env.GEMINI_API_KEY, system, data.messages, s)));
-    if (process.env.GROQ_API_KEY) list(process.env.GROQ_MODELS, 'llama-3.1-8b-instant').forEach(m => attempts.push(s => callGroq(m, process.env.GROQ_API_KEY, system, data.messages, s)));
-    if (!attempts.length) return res.status(503).json({ error: 'not_configured' });
+    const attempts = buildAttempts(system, data.messages);
+    if (!attempts.length) {
+        console.error('Kunci API belum diisi (GEMINI_API_KEY / GROQ_API_KEY)');
+        return res.status(503).json({ error: 'not_configured' });
+    }
 
     const started = Date.now();
-    for (const run of attempts) {
+    for (const a of attempts) {
         if (Date.now() - started > LIMITS.totalMs) break;
         const ctrl = new AbortController();
         const timer = setTimeout(() => ctrl.abort(), LIMITS.attemptMs);
         try {
-            const reply = await run(ctrl.signal);
+            const reply = await a.run(ctrl.signal);
             clearTimeout(timer);
             return res.status(200).json({ reply });
         } catch (e) {
             clearTimeout(timer);   // lanjut ke model / penyedia berikutnya
+            console.error('AI percobaan gagal:', a.name, e && e.message);
         }
     }
     return res.status(503).json({ error: 'unavailable' });
