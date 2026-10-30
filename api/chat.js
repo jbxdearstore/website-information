@@ -58,7 +58,7 @@ async function callGemini(model, key, system, msgs, signal) {
         body: JSON.stringify({
             systemInstruction: { parts: [{ text: system }] },
             contents: msgs.map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] })),
-            generationConfig: { maxOutputTokens: 400, temperature: 0.4 }
+            generationConfig: { maxOutputTokens: 1024, temperature: 0.4 }
         })
     });
     if (!r.ok) throw Object.assign(new Error('gemini ' + r.status), { status: r.status });
@@ -93,7 +93,7 @@ const list = (v, def) => String(v || def).split(',').map(s => s.trim()).filter(B
 // daftar percobaan: Gemini (tiap model di GEMINI_MODELS), lalu Groq (tiap model di GROQ_MODELS)
 function buildAttempts(system, msgs) {
     const attempts = [];
-    if (process.env.GEMINI_API_KEY) list(process.env.GEMINI_MODELS, 'gemini-2.5-flash-lite,gemini-2.5-flash').forEach(m =>
+    if (process.env.GEMINI_API_KEY) list(process.env.GEMINI_MODELS, 'gemini-3.5-flash-lite,gemini-3.1-flash-lite,gemini-3.6-flash').forEach(m =>
         attempts.push({ name: 'gemini:' + m, run: sg => callGemini(m, process.env.GEMINI_API_KEY, system, msgs, sg) }));
     if (process.env.GROQ_API_KEY) list(process.env.GROQ_MODELS, 'llama-3.1-8b-instant').forEach(m =>
         attempts.push({ name: 'groq:' + m, run: sg => callGroq(m, process.env.GROQ_API_KEY, system, msgs, sg) }));
