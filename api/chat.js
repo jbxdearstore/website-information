@@ -50,6 +50,16 @@ function clean(body) {
     return { messages: merged, knowledge: String(body.knowledge || '').slice(0, LIMITS.knowledgeChars) };
 }
 
+// ambil pesan error dari penyedia untuk diagnosis; kunci disamarkan dan dipotong
+async function errDetail(r, key) {
+    let t = '';
+    try { t = await r.text(); } catch (e) {}
+    try { const j = JSON.parse(t); t = (j && j.error && (j.error.message || j.error.status)) || t; } catch (e) {}
+    t = String(t || '').replace(/\s+/g, ' ').slice(0, 200);
+    if (key) t = t.split(key).join('[kunci]');
+    return t;
+}
+
 async function callGemini(model, key, system, msgs, signal) {
     const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + encodeURIComponent(model) + ':generateContent', {
         method: 'POST',
@@ -58,10 +68,10 @@ async function callGemini(model, key, system, msgs, signal) {
         body: JSON.stringify({
             systemInstruction: { parts: [{ text: system }] },
             contents: msgs.map(m => ({ role: m.role === 'user' ? 'user' : 'model', parts: [{ text: m.text }] })),
-            generationConfig: { maxOutputTokens: 1024, temperature: 0.4 }
+            generationConfig: { maxOutputTokens: 1024 }
         })
     });
-    if (!r.ok) throw Object.assign(new Error('gemini ' + r.status), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error('gemini ' + r.status), { status: r.status, detail: await errDetail(r, key) });
     const d = await r.json();
     const parts = d && d.candidates && d.candidates[0] && d.candidates[0].content && d.candidates[0].content.parts;
     const t = parts && parts.map(p => p.text || '').join('').trim();
@@ -81,7 +91,7 @@ async function callGroq(model, key, system, msgs, signal) {
             messages: [{ role: 'system', content: system }].concat(msgs.map(m => ({ role: m.role === 'user' ? 'user' : 'assistant', content: m.text })))
         })
     });
-    if (!r.ok) throw Object.assign(new Error('groq ' + r.status), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error('groq ' + r.status), { status: r.status, detail: await errDetail(r, key) });
     const d = await r.json();
     const t = d && d.choices && d.choices[0] && d.choices[0].message && String(d.choices[0].message.content || '').trim();
     if (!t) throw new Error('groq kosong');
@@ -116,7 +126,7 @@ module.exports = async function handler(req, res) {
             const ctrl = new AbortController();
             const timer = setTimeout(() => ctrl.abort(), LIMITS.attemptMs);
             try { await a.run(ctrl.signal); hasil.push({ model: a.name, ok: true }); }
-            catch (e) { hasil.push({ model: a.name, ok: false, pesan: e && e.message }); }
+            catch (e) { hasil.push({ model: a.name, ok: false, pesan: e && e.message, detail: e && e.detail }); }
             clearTimeout(timer);
         }
         return res.status(200).json(Object.assign(info, { error: undefined, hasil }));
@@ -147,7 +157,7 @@ module.exports = async function handler(req, res) {
             return res.status(200).json({ reply });
         } catch (e) {
             clearTimeout(timer);   // lanjut ke model / penyedia berikutnya
-            console.error('AI percobaan gagal:', a.name, e && e.message);
+            console.error('AI percobaan gagal:', a.name, e && e.message, (e && e.detail) || '');
         }
     }
     return res.status(503).json({ error: 'unavailable' });
