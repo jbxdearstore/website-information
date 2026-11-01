@@ -2162,15 +2162,22 @@ function cbAnswer(text) {
     if (has(['admin', 'whatsapp', 'kontak', 'hubungi', 'cs', 'penjual', 'owner', 'telepon']))
         return { t: 'Silakan hubungi admin lewat WhatsApp ya.', b: [{ l: 'Chat admin', act: 'wa' }] };
 
-    const iOrder = has(['order', 'beli', 'pemesanan', 'checkout', 'pesan']);
-    const iPay = has(['bayar', 'pembayaran', 'transfer', 'metode', 'qris', 'ewallet', 'bank'].concat(methodNames));
-    const iPkg = has(['paket', 'varian', 'pilihan', 'tipe']);
-    const iPrice = has(['harga', 'berapa', 'biaya', 'tarif', 'murah', 'mahal', 'diskon', 'promo']);
-    const iInfo = has(['detail', 'info', 'informasi', 'spesifikasi', 'deskripsi', 'jelaskan', 'tentang', 'ready', 'stok', 'habis', 'sold', 'terjual', 'tersedia']);
-    const iList = has(['produk', 'katalog', 'jual', 'jualan', 'daftar', 'barang', 'apa saja', 'ada apa']);
-
     const found = cbFindProduct(words);
     if (found) cbCtxProduct = found;
+
+    // kalimat panjang (lebih dari 6 kata) diserahkan ke AI, karena AI sudah memegang data toko
+    if (words.length > 6) return { t: CB_FALLBACK, b: CB_CHIPS, fallback: true };
+
+    // kata yang jelas urusan toko
+    const iPay = has(['bayar', 'pembayaran', 'transfer', 'metode', 'qris', 'ewallet'].concat(methodNames));
+    const iPkg = has(['paket', 'varian']);
+    const iPrice = has(['harga', 'biaya', 'tarif', 'murah', 'mahal', 'diskon', 'promo']);
+    const iList = has(['produk', 'katalog', 'jualan']);
+    const iOrder = has(['order', 'pemesanan', 'checkout']) || (has(['beli']) && (has(['cara', 'bagaimana']) || !!found));
+    // kata yang bisa berarti hal lain: dihitung hanya bila konteksnya toko atau lanjutan pertanyaan singkat tentang produk
+    const shopCtx = !!found || iPay || iPkg || iPrice || iList || iOrder;
+    const followUp = !!cbCtxProduct && words.length <= 3;
+    const iInfo = (shopCtx || followUp) && has(['berapa', 'detail', 'info', 'informasi', 'spesifikasi', 'deskripsi', 'jelaskan', 'tentang', 'ready', 'stok', 'habis', 'sold', 'terjual', 'tersedia']);
     const prod = found || ((iPkg || iPrice || iInfo) ? cbCtxProduct : null);
 
     if (iOrder && !iPay) return { t: CB_ORDER, b: [{ l: 'Buka katalog', act: 'shop' }] };
@@ -2189,9 +2196,8 @@ function cbAnswer(text) {
         if (withPkg.length) return cbProductAnswer(withPkg[0]);
     }
     if ((iPrice || iInfo || found) && prod) return cbProductAnswer(prod);
-    if (iPrice || iList) return cbListAnswer();
-    if (iInfo) return cbListAnswer();
-    if (has(['halo', 'hai', 'hi', 'hello', 'pagi', 'siang', 'sore', 'malam', 'assalamualaikum', 'permisi'])) return { t: CB_GREETING, b: CB_CHIPS };
+    if (iPrice || iList || iInfo) return cbListAnswer();
+    if (words.length <= 2 && has(['halo', 'hai', 'hi', 'hello', 'pagi', 'siang', 'sore', 'malam', 'assalamualaikum', 'permisi'])) return { t: CB_GREETING, b: CB_CHIPS };
     return { t: CB_FALLBACK, b: CB_CHIPS, fallback: true };
 }
 
