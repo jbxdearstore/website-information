@@ -490,6 +490,7 @@ body.light-mode .pi-light { display: block; }
 .pay-item { background: var(--card-light); }
 .pi-info h5 { color: var(--text-on-dark); }
 .pi-info p { color: var(--text-muted); }
+.pi-info .pi-owner { font-family: inherit; font-size: 11px; color: var(--text-muted); margin-top: 2px; }
 .btn-action { background: rgba(255,255,255,.07); color: var(--text-on-dark); }
 body.light-mode .btn-action { background: rgba(0,0,0,.06); }
 body.light-mode .pay-item { box-shadow: 0 0 0 1px #E5E5EA; }
@@ -751,8 +752,7 @@ body.light-mode .dt-desc { box-shadow:0 0 0 1px #E5E5EA, 0 2px 8px rgba(0,0,0,.0
 .payment-section { position:relative; margin-top:8px; padding:22px; border-radius:16px; background:var(--card-light); }
 .payment-section__old-price-badge { position:absolute; top:16px; right:16px; display:flex; align-items:center; gap:6px; padding:6px 12px; border-radius:10px; background:rgba(255,69,58,.16); }
 .payment-section__old-price-badge[hidden] { display:none; }
-.payment-section__old-price-badge svg { width:13px; height:13px; color:#FF453A; flex-shrink:0; }
-.payment-section__old-price-badge span { font-weight:600; font-size:12px; color:#FF453A; text-decoration:line-through; white-space:nowrap; }
+.payment-section__old-price-badge span { font-weight:600; font-size:12px; color:#FF453A; white-space:nowrap; }
 .payment-section__price-current { display:block; font-weight:800; font-size:28px; color:var(--text-on-dark); margin-bottom:20px; }
 .payment-section__divider { height:1px; background:var(--icon-box); margin:18px 0; }
 .payment-section__row { display:flex; align-items:center; justify-content:space-between; gap:12px; }
@@ -978,7 +978,9 @@ body.light-mode .cb-head, body.light-mode .cb-input { border-color:rgba(0,0,0,.1
 .cb-icon { width:32px; height:32px; background:rgba(255,255,255,.07); color:var(--text-on-dark); }
 body.light-mode .cb-icon { background:rgba(0,0,0,.06); }
 .cb-send { width:40px; height:40px; background:var(--text-on-dark); color:var(--bg-deep); }
-.cb-send.is-busy { opacity:.4; }
+.cb-send { transition: transform .25s, background-color .25s, color .25s; }
+.cb-send:disabled { background:#2C2C2E; color:#636366; cursor:not-allowed; pointer-events:none; transform:none; }
+body.light-mode .cb-send:disabled { background:#E5E5EA; color:#AEAEB2; }
 .cb-icon:active, .cb-send:active { transform:scale(.95); }
 
 .cb-body { flex:1; overflow-y:auto; padding:14px 12px; display:flex; flex-direction:column; gap:8px; overscroll-behavior:contain; }
@@ -1115,6 +1117,21 @@ body.light-mode .fl-box { border-color:#C7C7CC; }
 
 /* tombol salin di panel Payment: lingkaran */
 body:not(#ic) .pay-item .btn-action { border-radius: 50%; }
+
+/* ===== JARAK TEKS PANEL PEMBAYARAN ===== */
+:root { --pay-gap: 4px; --pay-gap-lg: 12px; }   /* --pay-gap: antar baris teks; --pay-gap-lg: antar kotak */
+
+/* panel Payment di halaman Pay: nama metode, nomor, (nama penerima) */
+.pi-info { display: flex; flex-direction: column; gap: var(--pay-gap); }
+
+/* panel pembayaran: nama metode + keterangan di header */
+.pm-who-t { display: flex; flex-direction: column; gap: var(--pay-gap); }
+
+/* panel pembayaran: label + isi (Nomor Tujuan, Atas Nama) */
+.pm-tx { display: flex; flex-direction: column; gap: var(--pay-gap); }
+
+/* jarak antar kotak Nomor Tujuan dan Atas Nama */
+.pm-tile { margin-bottom: var(--pay-gap-lg); }
 
 </style></head>
 <body>
@@ -1295,7 +1312,6 @@ window.addEventListener('load', function () {
 
         <div class="payment-section" id="dtPay">
             <div class="payment-section__old-price-badge" id="dtOldBadge" hidden>
-                <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20.59 13.41 11 3.83A2 2 0 0 0 9.59 3.24L4 3a1 1 0 0 0-1 1l.24 5.59a2 2 0 0 0 .59 1.41l9.58 9.59a2 2 0 0 0 2.83 0l4.35-4.35a2 2 0 0 0 0-2.83Z"></path><circle cx="7.5" cy="7.5" r="1.5"></circle></svg>
                 <span id="dtOld"></span>
             </div>
             <span class="payment-section__price-current" id="dtPrice"></span>
@@ -1432,7 +1448,7 @@ window.addEventListener('load', function () {
         <div class="cb-body" id="cbBody"></div>
         <div class="cb-input">
             <input type="text" id="cbInput" placeholder="Message..." autocomplete="off" enterkeyhint="send" aria-label="Pesan">
-            <button type="button" class="cb-send" id="cbSend" aria-label="Kirim"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+            <button type="button" class="cb-send" id="cbSend" aria-label="Kirim" disabled><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
         </div>
     </div>
     <button type="button" class="ripple" id="cbFab" aria-label="Buka AI Shop" aria-expanded="false">
@@ -1548,7 +1564,7 @@ const payConfig = {
         {   // panel E-Wallet
             id: 'ewallet',
             items: [
-                { name: 'DANA',      num: '081234567890', img: 'assets/img/payment/ewallet/dana.webp' },
+                { name: 'DANA',      num: '081234567890', owner: 'Kontol', img: 'assets/img/payment/ewallet/dana.webp' },
                 { name: 'ShopeePay', num: '081234567890', img: 'assets/img/payment/ewallet/shopeepay.webp' },
                 { name: 'GoPay',     num: '081234567890', img: 'assets/img/payment/ewallet/gopay.webp' },
                 { name: 'OVO',       num: '081234567890', img: 'assets/img/payment/ewallet/ovo.webp' },
@@ -1675,6 +1691,7 @@ function rowHtml(d, key) {
                 <div class="pi-info">
                     <h5>${escHtml(d.name)}</h5>
                     <p id="t-${key}">${escHtml(d.num)}</p>
+                    <p class="pi-owner">a.n. ${escHtml(d.owner || payConfig.owner)}</p>
                 </div>
             </div>
             <button class="btn-action ripple" data-n="${escHtml(d.name)}" onclick="copyIt('t-${key}', this.dataset.n)">
@@ -2604,6 +2621,9 @@ function closeLightbox() {
 const NavBack = (() => {
     const stack = [];
     const HOME = 'home';
+    const afterPop = [];   // tugas yang menunggu penutupan layer selesai
+    let keepDetail = false;        // true saat pindah tab: detail produk jangan ditutup
+    let detailSuspended = false;   // detail masih terbuka di Shop, tapi user sedang di tab lain
     history.replaceState({ d: 0 }, '');
 
     const orig = { showPage, backToCatalog, backToStep1, closePayment, closeLightbox, openDetail, openPayment, showOrderForm, openLightbox };
@@ -2615,7 +2635,11 @@ const NavBack = (() => {
         lb()    { orig.closeLightbox(); },
         pay()   { orig.closePayment(); },
         form()  { if (!document.getElementById('pmStep2').hidden) orig.backToStep1(); },
-        detail(){ if (!document.getElementById('shopDetail').hidden) orig.backToCatalog(); },
+        detail(){
+    if (keepDetail) return;   // pindah tab: biarkan detail tetap terbuka
+    if (!document.getElementById('shopDetail').hidden) orig.backToCatalog();
+},
+      chat()  { cbCloseNow(); },
         page()  {
             if (document.querySelector('.page.active').id === 'page-' + HOME) return;
             orig.showPage(HOME);
@@ -2653,18 +2677,37 @@ const NavBack = (() => {
         if (d > stack.length) { markAppNav(); history.back(); return; }
         if (!fromApp && stack.length > d) playTick();   // tombol/gestur kembali HP menutup popup atau halaman
         while (stack.length > d) rawClose[stack.pop()]();
+        afterPop.splice(0).forEach(fn => fn());
+        keepDetail = false;
     });
 
     // --- pasang ke fungsi yang sudah ada ---
     showPage = function (menu) {
-        const ok = orig.showPage(menu);
-        if (!ok) return ok;
-        const pi = stack.indexOf('page');
-        if (menu === HOME) { if (pi >= 0) unwindTo(pi); }
-        else if (pi < 0) push('page');
-        else unwindTo(pi + 1);
-        return ok;
-    };
+    const fromShop = document.querySelector('.page.active').id === 'page-shop';
+    const detailOpen = !document.getElementById('shopDetail').hidden;
+    const leavingDetail = fromShop && menu !== 'shop' && detailOpen;   // pindah tab saat detail terbuka
+    if (leavingDetail) {
+        keepDetail = true;
+        setTimeout(() => { keepDetail = false; }, 500);   // pengaman
+    }
+
+    const ok = orig.showPage(menu);
+    if (!ok) { keepDetail = false; return ok; }
+
+    const pi = stack.indexOf('page');
+    if (menu === HOME) { if (pi >= 0) unwindTo(pi); }
+    else if (pi < 0) push('page');
+    else unwindTo(pi + 1);
+
+    if (leavingDetail) detailSuspended = true;
+
+    // kembali ke Shop: pasang lagi layer detail supaya tombol kembali tetap benar
+    if (menu === 'shop' && !fromShop && detailSuspended) {
+        detailSuspended = false;
+        if (!document.getElementById('shopDetail').hidden && !stack.includes('detail')) push('detail');
+    }
+    return ok;
+};
     openDetail = function (id, goPay) {
         const was = !document.getElementById('shopDetail').hidden;
         orig.openDetail(id, goPay);
@@ -2687,7 +2730,14 @@ const NavBack = (() => {
     };
     closeLightbox  = () => dismiss('lb');
 
-    return { push, dismiss };
+    return {
+    push, dismiss,
+    has: name => stack.includes(name),
+    later(fn) {   // jalankan fn setelah layer selesai ditutup (pengaman 400 ms)
+        afterPop.push(fn);
+        setTimeout(() => { const i = afterPop.indexOf(fn); if (i >= 0) { afterPop.splice(i, 1); fn(); } }, 400);
+    }
+};
 })();
 
 // --- PANEL BISA DITARIK KE BAWAH UNTUK MENUTUP (gaya iOS) ---
@@ -2818,6 +2868,10 @@ let cbRun = 0;          // penanda sesi animasi (naik saat riwayat dihapus)
 let cbBusy = false;
 let cbCtxProduct = null;
 let cbGreeted = false;
+// tombol kirim hanya aktif jika ada teks dan AI tidak sedang menjawab
+function cbSyncSend() {
+    cbSendBtn.disabled = cbBusy || !cbInput.value.trim();
+}
 
 function cbWords(text) {
     return String(text || '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean).map(w => {
@@ -3040,7 +3094,7 @@ function cbReveal(el, text, done) {
 function cbBotSay(msg, wait) {
     const run = cbRun;
     cbBusy = true;
-    cbSendBtn.classList.add('is-busy');
+    cbSyncSend();
     setTimeout(() => {
         if (run !== cbRun) return;
         const typing = document.createElement('div');
@@ -3058,7 +3112,7 @@ function cbBotSay(msg, wait) {
                 cbMsgs.push({ r: 'bot', t: m.t, b: m.b || [] });
                 cbSave();
                 cbBusy = false;
-                cbSendBtn.classList.remove('is-busy');
+                cbSyncSend();
             });
         });
     }, wait);
@@ -3082,11 +3136,13 @@ function cbAct(act, arg) {
     playTick();
     if (act === 'ask') { cbUserSay(arg); return; }
     if (act === 'wa') { window.open('https://wa.me/' + payConfig.confirm.number, '_blank'); return; }
-    cbClose();
-    const go = menu => document.querySelector('.nav-item[data-menu="' + menu + '"]').click();
-    if (act === 'pay') go('pay');
-    if (act === 'shop') go('shop');
-    if (act === 'detail') { go('shop'); setTimeout(() => openDetail(arg), 80); }
+    const run = () => {
+        const go = menu => document.querySelector('.nav-item[data-menu="' + menu + '"]').click();
+        if (act === 'pay') go('pay');
+        if (act === 'shop') go('shop');
+        if (act === 'detail') { go('shop'); setTimeout(() => openDetail(arg), 80); }
+    };
+    if (cbClose()) NavBack.later(run); else run();   // tunggu chat tertutup dulu, baru pindah halaman
 }
 
 // ---- buka / tutup ----
@@ -3098,9 +3154,16 @@ function cbOpen() {
         cbGreeted = true;
         cbBotSay({ t: CB_GREETING, b: CB_CHIPS }, CB_TYPING_FIRST);
     }
+    if (!NavBack.has('chat')) NavBack.push('chat');
     cbScroll();
 }
+// menutup lewat history supaya tombol kembali HP tetap sinkron; true = penutupan selesai setelah popstate
 function cbClose() {
+    if (NavBack.has('chat')) { NavBack.dismiss('chat'); return true; }
+    cbCloseNow();
+    return false;
+}
+function cbCloseNow() {
     cbRoot.classList.remove('open');
     document.getElementById('cbFab').setAttribute('aria-expanded', 'false');
     document.getElementById('cbWin').setAttribute('aria-hidden', 'true');
@@ -3112,7 +3175,7 @@ function cbClearAll() {
     cbCtxProduct = null;
     cbBusy = false;
     cbGreeted = false;
-    cbSendBtn.classList.remove('is-busy');
+    cbSyncSend();
     safeStorageSet('cbchat', '[]');
     cbBody.innerHTML = '';
     if (cbRoot.classList.contains('open')) { cbGreeted = true; cbBotSay({ t: CB_GREETING, b: CB_CHIPS }, CB_TYPING_FIRST); }
@@ -3131,6 +3194,42 @@ cbInput.addEventListener('keydown', e => {
     const v = cbInput.value;
     if (!cbBusy && v.trim()) { cbInput.value = ''; cbUserSay(v); }
 });
+cbInput.addEventListener('input', cbSyncSend);
+cbSyncSend();
+
+// ---- tutup jendela chat saat tap/klik di luar jendela ----
+(function () {
+    const SLOP = 8;   // px: geser lebih dari ini = scroll, bukan tap
+    let start = null, swallow = false;
+    const isOutside = e => cbRoot.classList.contains('open')
+        && !cbRoot.classList.contains('cb-away') && !e.target.closest('#cbRoot');
+
+    document.addEventListener('pointerdown', e => {
+        start = (e.isPrimary && isOutside(e)) ? { id: e.pointerId, x: e.clientX, y: e.clientY } : null;
+    }, { passive: true, capture: true });
+    document.addEventListener('pointermove', e => {
+        if (!start || e.pointerId !== start.id) return;
+        if (Math.abs(e.clientX - start.x) > SLOP || Math.abs(e.clientY - start.y) > SLOP) start = null;
+    }, { passive: true, capture: true });
+    document.addEventListener('pointerup', e => {
+        if (!start || e.pointerId !== start.id) return;
+        start = null;
+        swallow = true;
+        setTimeout(() => { swallow = false; }, 400);
+        cbClose();
+    }, { passive: true, capture: true });
+    document.addEventListener('pointercancel', () => { start = null; }, { passive: true, capture: true });
+    document.addEventListener('scroll', () => { start = null; }, { passive: true, capture: true });
+    // klik yang menutup chat tidak diteruskan ke elemen di bawahnya
+    document.addEventListener('click', e => {
+        if (!swallow) return;
+        swallow = false;
+        e.preventDefault();
+        e.stopPropagation();
+    }, true);
+    // tambahan untuk desktop: tombol Esc juga menutup chat
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && cbRoot.classList.contains('open')) cbClose(); });
+})();
 
 // ---- penyesuaian tata letak ----
 function cbMeasure() {
